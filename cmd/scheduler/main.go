@@ -73,6 +73,7 @@ func (s epochInterval) Next(after time.Time) time.Time {
 	next := (after.UTC().UnixNano()/step + 1) * step
 	return time.Unix(0, next).UTC()
 }
+
 // All cron expressions are evaluated against UTC, even when tests or
 // different scheduler replicas supply time.Time values in different zones.
 type utcSchedule struct {
