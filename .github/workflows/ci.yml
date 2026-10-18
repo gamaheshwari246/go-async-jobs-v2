@@ -53,10 +53,11 @@ jobs:
           curl --fail --silent --show-error http://127.0.0.1:8082/readyz
       - name: Verify recurring scheduler enqueues real tasks
         run: |
-          CRON_SCHEDULE='@every 3s' docker compose --profile scheduler up -d --no-deps scheduler
+          CRON_SCHEDULE='@every 3s' docker compose --profile scheduler up -d --no-deps --scale scheduler=2 scheduler
           sleep 8
           docker compose logs scheduler
           docker compose logs scheduler | grep -q cron_enqueued
+          docker compose logs scheduler | grep -q cron_tick_deduplicated
       - name: Run 25 deployment checks (23 public; 2 privileged skipped)
         run: |
           bash -n scripts/verify_deployment_25.sh
