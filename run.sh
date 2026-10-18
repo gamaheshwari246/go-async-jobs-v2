@@ -20,7 +20,7 @@ Usage: bash run.sh [command]
   stop     Stop services (preserves Redis data)
   help     Show this help
 
-No local Go installation is required. Docker Compose must work in Ubuntu/WSL. V2 uses project go-async-jobs-v2 and host API port 8082.
+No local Go installation is required. Docker Compose must work in Ubuntu/WSL. V2 uses project go-async-jobs-v2 and host API port 8080.
 EOF
 }
 
@@ -28,7 +28,7 @@ case "${1:-start}" in
   start)
     docker compose --profile scheduler up --build -d --scale worker=2
     echo
-    echo "V2 API: http://localhost:8082/healthz"
+    echo "V2 API: http://localhost:8080/healthz"
     echo "Logs: bash run.sh logs"
     ;;
   build)

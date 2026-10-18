@@ -4,12 +4,12 @@
 # RUN_PRIVILEGED=1 and use SSH, not the unauthenticated public API, for admin.
 set -Eeuo pipefail
 
-BASE_URL="${BASE_URL:-http://127.0.0.1:8082}"
+BASE_URL="${BASE_URL:-http://146.190.95.143:8080}"
 BASE_URL="${BASE_URL%/}"
 POLL_SECONDS="${POLL_SECONDS:-40}"
 SSH_HOST="${SSH_HOST:-}"
 RUN_PRIVILEGED="${RUN_PRIVILEGED:-0}"
-REMOTE_APP_DIR="${REMOTE_APP_DIR:-/root/go-async-jobs}"
+REMOTE_APP_DIR="${REMOTE_APP_DIR:-/root/go-async-jobs-v2}"
 
 for command in curl jq awk; do
   if ! command -v "$command" >/dev/null 2>&1; then

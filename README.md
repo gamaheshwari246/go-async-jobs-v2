@@ -1,6 +1,6 @@
 # go-async-jobs V2: scheduling and metrics
 
-**This is the standalone V2 repository; the original [V1 repository](https://github.com/gamaheshwari246/go-async-jobs) and its DigitalOcean deployment are unchanged.** **[Open technical debt](docs/TECHNICAL_DEBT.md)** and **[resolved scheduling issues](docs/RESOLVED.md)** are tracked separately. Read [V2 setup, scheduling, cron and metrics guide](V2.md) first. V2 binds the API only to `127.0.0.1:8082` and uses a separate Compose project and Redis volume.
+**This is the standalone V2 repository; the original [V1 repository](https://github.com/gamaheshwari246/go-async-jobs) and its DigitalOcean deployment are unchanged.** **[Open technical debt](docs/TECHNICAL_DEBT.md)** and **[resolved scheduling issues](docs/RESOLVED.md)** are tracked separately. Read [V2 setup, scheduling, cron and metrics guide](V2.md) first. V2 uses a separate Compose project and Redis volume. Its API is published on host port `8080` for remote demonstration; ensure V1 is stopped before starting V2 and restrict DigitalOcean inbound TCP 8080 to trusted source IPs.
 
 ---
 
@@ -18,7 +18,7 @@ cd go-async-jobs-v2
 bash run.sh
 ```
 
-This builds the Go API, worker and scheduler images and starts **Redis + API + two workers + one cron scheduler**. Check http://localhost:8082/healthz.
+This builds the Go API, worker and scheduler images and starts **Redis + API + two workers + one cron scheduler**. Check http://localhost:8080/healthz.
 
 | Command | Action |
 |---|---|
@@ -35,7 +35,7 @@ You may use `./run.sh` instead after `chmod +x run.sh`. **Warning:** integration
 Submit a job (the server generates the job ID):
 
 ```bash
-curl -i -X POST http://localhost:8082/jobs \
+curl -i -X POST http://localhost:8080/jobs \
   -H 'Content-Type: application/json' \
   -d '{"type":"demo.sleep","payload":{"duration_ms":250,"fail_first":0},"priority":9,"max_retries":3,"timeout_seconds":5}'
 ```
@@ -45,9 +45,9 @@ The API replies HTTP 202 with `job_id` without waiting for handler execution. Re
 Operational drain (rejects new submissions, lets accepted jobs finish):
 
 ```bash
-curl -X POST http://localhost:8082/admin/drain -H 'Authorization: Bearer local-dev-token'
-curl -X GET http://localhost:8082/admin/drain -H 'Authorization: Bearer local-dev-token'
-curl -X POST http://localhost:8082/admin/resume -H 'Authorization: Bearer local-dev-token'
+curl -X POST http://localhost:8080/admin/drain -H 'Authorization: Bearer local-dev-token'
+curl -X GET http://localhost:8080/admin/drain -H 'Authorization: Bearer local-dev-token'
+curl -X POST http://localhost:8080/admin/resume -H 'Authorization: Bearer local-dev-token'
 ```
 
 ## Worker and job configuration
@@ -92,7 +92,7 @@ From your laptop (requires `curl`, `jq`, and `awk`):
 
 ```bash
 git pull origin main
-BASE_URL=http://127.0.0.1:8082 bash scripts/verify_deployment_25.sh
+BASE_URL=http://146.190.95.143:8080 bash scripts/verify_deployment_25.sh
 ```
 
 Tests **1–23** run automatically, creating only small demonstration jobs (including intentionally failing jobs). Tests **24–25** are privileged and **SKIP** unless explicitly enabled. To run those from a machine with SSH key access to the Droplet:

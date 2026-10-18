@@ -50,7 +50,7 @@ jobs:
       - name: Compose API and worker readiness smoke test
         run: |
           docker compose up --build -d --wait --wait-timeout 90 --scale worker=2
-          curl --fail --silent --show-error http://127.0.0.1:8082/readyz
+          curl --fail --silent --show-error http://127.0.0.1:8080/readyz
       - name: Verify recurring scheduler enqueues real tasks
         run: |
           CRON_SCHEDULE='@every 3s' docker compose --profile scheduler up -d --no-deps --scale scheduler=2 scheduler
@@ -61,7 +61,7 @@ jobs:
       - name: Run 25 deployment checks (23 public; 2 privileged skipped)
         run: |
           bash -n scripts/verify_deployment_25.sh
-          BASE_URL=http://127.0.0.1:8082 bash scripts/verify_deployment_25.sh
+          BASE_URL=http://127.0.0.1:8080 bash scripts/verify_deployment_25.sh
       - name: Tear down Compose smoke test
         if: always()
         run: docker compose down -v --remove-orphans
