@@ -50,6 +50,10 @@ curl -X GET http://localhost:8080/admin/drain -H 'Authorization: Bearer local-de
 curl -X POST http://localhost:8080/admin/resume -H 'Authorization: Bearer local-dev-token'
 ```
 
+## Documented assumptions
+
+Priority buckets (0–3 low, 4–6 default, 7–9 critical), worker queue weights (1:3:6), retry/timeout ranges, delayed/cron scheduling, persistence, metrics, and network exposure are deliberate V2 **design decisions**, not universal queue guarantees. See the [design assumptions, defaults and trade-offs](docs/ASSUMPTIONS.md) and [full architecture](docs/ARCHITECTURE.md).
+
 ## Worker and job configuration
 
 `REDIS_ADDR` (default `127.0.0.1:6379`), `WORKER_CONCURRENCY` (default 5; range 1–100), `HTTP_ADDR` (default `:8080`), `WORKER_HEALTH_ADDR` (default `:8081`, internal to each worker container) and `ADMIN_TOKEN` (required for admin API) configure the two processes. Docker Compose sets a development-only admin token; replace it outside local development. Scale workers using `docker compose up -d --scale worker=4`.

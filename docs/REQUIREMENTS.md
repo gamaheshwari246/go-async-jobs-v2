@@ -1,5 +1,7 @@
 # Requirements-to-implementation checklist
 
+The explicit distinction between assignment requirements and implementation choices (including numeric priority buckets, retries, bounds, and cloud-demo access) is documented in [V2 design assumptions](ASSUMPTIONS.md).
+
 | Assignment requirement | Actual implementation | Status / qualification |
 |---|---|---|
 | Submit payload, priority, max retries, timeout; return ID immediately | `POST /jobs`, `internal/spec`, Asynq enqueue, HTTP 202 | Implemented |

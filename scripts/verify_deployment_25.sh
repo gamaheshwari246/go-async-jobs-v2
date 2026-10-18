@@ -159,17 +159,19 @@ t10() {
   require_json '.attempts == 3 and .max_retries == 3'
 }
 t11() {
-  # Demonstrates the aggregate timing of 1s then 2s scheduled retries.
-  # It does not assert exact dispatcher wake-up time.
-  local start elapsed
-  start=$(date +%s)
+  # The worker schedules exponential delays of >=1s and >=2s.
+  # End-to-end timing is less precise because Redis/Asynq tracks due times
+  # and workers poll asynchronously; unit tests assert the exact delay policy.
+  # Measure milliseconds to avoid rounding from date +%s whole seconds.
+  local start_ms elapsed_ms
+  start_ms=$(date +%s%3N)
   submit_job '{"type":"demo.sleep","priority":9,"max_retries":2,"payload":{"duration_ms":20,"fail_first":2}}' || return 1
   local id="$(jq -r '.job_id' "$RESPONSE_FILE")"
   poll_status "$id" succeeded || return 1
   require_json '.attempts == 3' || return 1
-  elapsed=$(( $(date +%s) - start ))
-  if (( elapsed < 2 )); then
-    printf 'Two backoffs finished in %ss, expected >=2s to show non-immediate retries\n' "$elapsed" >&2
+  elapsed_ms=$(( $(date +%s%3N) - start_ms ))
+  if (( elapsed_ms < 2000 )); then
+    printf 'Two backoffs completed in %d.%03ds, expected >=2s observed scheduling delay\n' "$((elapsed_ms / 1000))" "$((elapsed_ms % 1000))" >&2
     return 1
   fi
 }
