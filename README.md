@@ -1,6 +1,6 @@
 # go-async-jobs V2: scheduling and metrics
 
-**This is the standalone V2 repository; the original [V1 repository](https://github.com/gamaheshwari246/go-async-jobs) and its DigitalOcean deployment are unchanged.** Read [V2 setup, scheduling, cron and metrics guide](V2.md) first. V2 binds the API only to `127.0.0.1:8082` and uses a separate Compose project and Redis volume.
+**This is the standalone V2 repository; the original [V1 repository](https://github.com/gamaheshwari246/go-async-jobs) and its DigitalOcean deployment are unchanged.** **Known limitations and follow-up work are tracked in [V2 technical debt](docs/TECHNICAL_DEBT.md).** Read [V2 setup, scheduling, cron and metrics guide](V2.md) first. V2 binds the API only to `127.0.0.1:8082` and uses a separate Compose project and Redis volume.
 
 ---
 
@@ -57,6 +57,9 @@ curl -X POST http://localhost:8082/admin/resume -H 'Authorization: Bearer local-
 Priority is 0–9, default 5. 0–3 maps to `low` (weight 1), 4–6 to `default` (weight 3), 7–9 to `critical` (weight 6); numeric priorities are **not strictly ordered**. Asynq scans scheduled/retry tasks every **1 second** (rather than its 5-second default); execution remains best-effort and depends on worker capacity. `max_retries` is 0–10 (default 3). `timeout_seconds` is 1–300 (default 30). Payload limit is 16 KiB. The demonstrated handler types are `demo.sleep` and `demo.effect`.
 
 ## Full lifecycle
+
+**V2 status compatibility:** The original five HTTP job statuses are `queued`, `running`, `failed`, `succeeded` and `dead_lettered`. V2 intentionally adds a **sixth state, `scheduled`**, for accepted jobs waiting until `run_at`. API consumers should handle this extension explicitly.
+
 
 ```mermaid
 flowchart TD
