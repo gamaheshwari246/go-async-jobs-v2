@@ -1,0 +1,4 @@
+go-async-jobs
+*.test
+*.out
+.env

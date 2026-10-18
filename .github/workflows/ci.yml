@@ -1,0 +1,66 @@
+name: Go CI
+on:
+  push:
+  pull_request:
+jobs:
+  test:
+    timeout-minutes: 10
+    services:
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 2s
+          --health-timeout 2s
+          --health-retries 20
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23'
+      - name: Check WSL launcher and Docker Compose configuration
+        run: |
+          bash -n run.sh
+          docker compose --profile test --profile scheduler config -q
+      - name: Verify committed dependencies
+        run: |
+          go mod tidy
+          git diff --exit-code -- go.mod go.sum
+      - name: Verify Go formatting
+        run: |
+          unformatted="$(gofmt -l $(find . -name '*.go' -type f))"
+          if [ -n "$unformatted" ]; then
+            echo "Unformatted Go files:"
+            echo "$unformatted"
+            exit 1
+          fi
+      - name: Full unit and Redis integration suite
+        env:
+          REDIS_TEST_ADDR: 127.0.0.1:6379
+        run: go test -mod=readonly -race -tags=integration -count=1 ./...
+      - name: Vet
+        run: go vet -mod=readonly ./...
+      - name: Build
+        run: go build -mod=readonly ./cmd/api ./cmd/worker ./cmd/healthcheck ./cmd/scheduler
+      - name: Docker image smoke build
+        run: docker build -t go-async-jobs:ci .
+      - name: Compose API and worker readiness smoke test
+        run: |
+          docker compose up --build -d --wait --wait-timeout 90 --scale worker=2
+          curl --fail --silent --show-error http://127.0.0.1:8082/readyz
+      - name: Verify recurring scheduler enqueues real tasks
+        run: |
+          CRON_SCHEDULE='@every 3s' docker compose --profile scheduler up -d --no-deps scheduler
+          sleep 8
+          docker compose logs scheduler
+          docker compose logs scheduler | grep -q cron_enqueued
+      - name: Run 25 deployment checks (23 public; 2 privileged skipped)
+        run: |
+          bash -n scripts/verify_deployment_25.sh
+          BASE_URL=http://127.0.0.1:8082 bash scripts/verify_deployment_25.sh
+      - name: Tear down Compose smoke test
+        if: always()
+        run: docker compose down -v --remove-orphans
