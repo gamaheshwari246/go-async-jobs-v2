@@ -157,8 +157,12 @@ return 3
 `)
 
 func Inspect(ctx context.Context, client redis.UniversalClient, key string, body []byte) (Decision, bool, error) {
-    result, err := inspectScript.Run(ctx, client, []string{redisKey(key)}, fingerprint(body)).Int()
-    if err != nil { return New, false, fmt.Errorf("inspect idempotency key: %w", err) }
-    if result == -1 { return New, false, nil }
-    return Decision(result), true, nil
+	result, err := inspectScript.Run(ctx, client, []string{redisKey(key)}, fingerprint(body)).Int()
+	if err != nil {
+		return New, false, fmt.Errorf("inspect idempotency key: %w", err)
+	}
+	if result == -1 {
+		return New, false, nil
+	}
+	return Decision(result), true, nil
 }

@@ -67,6 +67,7 @@ func QueueForPriority(p int) (string, error) {
 	}
 	return "low", nil
 }
+
 // Validate accepts only new delayed submissions whose run_at is still in the future.
 func Validate(req SubmitRequest) (Validated, error) {
 	return validate(req, false)
@@ -112,7 +113,7 @@ func validate(req SubmitRequest, replay bool) (Validated, error) {
 		if !replay && !parsed.After(now) {
 			return out, fmt.Errorf("run_at must be in the future")
 		}
-		if !replay && parsed.After(now.Add(30 * 24 * time.Hour)) {
+		if !replay && parsed.After(now.Add(30*24*time.Hour)) {
 			return out, fmt.Errorf("run_at cannot exceed 30 days")
 		}
 		runAt = &parsed

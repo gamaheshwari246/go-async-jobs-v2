@@ -85,16 +85,22 @@ func timeNowParse(t *testing.T, s string) time.Time {
 
 func TestValidateReplayElapsedSchedule(t *testing.T) {
 	elapsed := time.Now().Add(-time.Minute).UTC().Format(time.RFC3339Nano)
-	req := SubmitRequest{Type:"demo.sleep",Payload:[]byte("{}"),RunAt:&elapsed}
-	if _,err:=Validate(req); err==nil {t.Fatal("new delayed request in past accepted")}
-	replay,err:=ValidateForReplay(req)
-	if err!=nil || replay.RunAt==nil {t.Fatalf("replay must parse past schedule: %+v %v",replay,err)}
-	matching:=time.Now().Add(time.Minute).UTC().Format(time.RFC3339Nano)
-	futureReq:=SubmitRequest{Type:"demo.sleep",Payload:[]byte("{}"),RunAt:&matching}
-	got,err:=Validate(futureReq)
-	if err!=nil {t.Fatal(err)}
-	replayFuture,err:=ValidateForReplay(futureReq)
-	if err!=nil || string(got.Body)!=string(replayFuture.Body) {
-		t.Fatalf("replay fingerprint changed: %v",err)
+	req := SubmitRequest{Type: "demo.sleep", Payload: []byte("{}"), RunAt: &elapsed}
+	if _, err := Validate(req); err == nil {
+		t.Fatal("new delayed request in past accepted")
+	}
+	replay, err := ValidateForReplay(req)
+	if err != nil || replay.RunAt == nil {
+		t.Fatalf("replay must parse past schedule: %+v %v", replay, err)
+	}
+	matching := time.Now().Add(time.Minute).UTC().Format(time.RFC3339Nano)
+	futureReq := SubmitRequest{Type: "demo.sleep", Payload: []byte("{}"), RunAt: &matching}
+	got, err := Validate(futureReq)
+	if err != nil {
+		t.Fatal(err)
+	}
+	replayFuture, err := ValidateForReplay(futureReq)
+	if err != nil || string(got.Body) != string(replayFuture.Body) {
+		t.Fatalf("replay fingerprint changed: %v", err)
 	}
 }
