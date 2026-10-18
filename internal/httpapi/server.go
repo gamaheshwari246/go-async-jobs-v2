@@ -21,6 +21,7 @@ import (
 )
 
 var queues = []string{"critical", "default", "low"}
+var errTaskConflict = errors.New("idempotency key collided with an existing different task")
 
 // Server exposes job submission, state inspection and operational controls.
 type Server struct {
@@ -287,7 +288,7 @@ func (s *Server) replayPastScheduled(w http.ResponseWriter, r *http.Request, req
 	existing, err := s.lookupExistingTask(idempotency.TaskID(key), job)
 	if err != nil {
 		// Avoid exposing task-body mismatches while preserving 409 conflict.
-		if err.Error() == "idempotency key collided with an existing different task" {
+		if errors.Is(err, errTaskConflict) {
 			http.Error(w, "idempotency key reused for different job configuration", http.StatusConflict)
 		} else {
 			http.Error(w, "queue temporarily unavailable", http.StatusServiceUnavailable)
@@ -319,7 +320,7 @@ func (s *Server) lookupExistingTask(id string, job spec.Validated) (*asynq.TaskI
 			return nil, err
 		}
 		if !bytes.Equal(info.Payload, job.Body) || info.Type != job.Type {
-			return nil, errors.New("idempotency key collided with an existing different task")
+			return nil, errTaskConflict
 		}
 		return info, nil
 	}
