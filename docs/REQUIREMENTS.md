@@ -37,3 +37,7 @@ Optional HTTP idempotency now uses an atomic Redis fingerprint reservation with 
 ## Reliability polish
 
 Production workers poll delayed/retry tasks every **one second** instead of Asynq's five-second default. The API has a Redis-backed readiness endpoint and each worker publishes internal health/readiness based on recent Asynq Redis checks, with Docker Compose healthchecks. A small standalone Go health probe is built into the runtime image. Real-Redis integration tests in `internal/operations/idempotency` exercise reservation decision outcomes, concurrent claims, lease expiry and stale-owner protection using disposable Redis DB 12. Redis `noeviction` exhaustion may block **task state transitions as well as enqueues**, so early memory warnings are recommended but not implemented as an alerting service. Cancellation remains intentionally out of scope: authenticated drain satisfies the exercise's drain-or-cancel requirement.
+
+## V2 optional scheduling hardening
+
+Delayed `run_at` requests are safely replayable with matching `Idempotency-Key` after the scheduled timestamp. Concurrent cron schedulers use UTC-aligned occurrence IDs and Redis/Asynq task-ID deduplication. See [resolved P1 issues](RESOLVED.md) and [remaining P2 work](TECHNICAL_DEBT.md). GitHub Actions uses two cron scheduler replicas in its Compose smoke test.

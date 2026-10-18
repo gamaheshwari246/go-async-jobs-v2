@@ -1,6 +1,6 @@
 # go-async-jobs V2: scheduling and metrics
 
-**This is the standalone V2 repository; the original [V1 repository](https://github.com/gamaheshwari246/go-async-jobs) and its DigitalOcean deployment are unchanged.** **Known limitations and follow-up work are tracked in [V2 technical debt](docs/TECHNICAL_DEBT.md).** Read [V2 setup, scheduling, cron and metrics guide](V2.md) first. V2 binds the API only to `127.0.0.1:8082` and uses a separate Compose project and Redis volume.
+**This is the standalone V2 repository; the original [V1 repository](https://github.com/gamaheshwari246/go-async-jobs) and its DigitalOcean deployment are unchanged.** **[Open technical debt](docs/TECHNICAL_DEBT.md)** and **[resolved scheduling issues](docs/RESOLVED.md)** are tracked separately. Read [V2 setup, scheduling, cron and metrics guide](V2.md) first. V2 binds the API only to `127.0.0.1:8082` and uses a separate Compose project and Redis volume.
 
 ---
 
@@ -18,7 +18,7 @@ cd go-async-jobs-v2
 bash run.sh
 ```
 
-This builds the Go API and worker Docker images and starts **Redis + API + two workers**. Check http://localhost:8082/healthz.
+This builds the Go API, worker and scheduler images and starts **Redis + API + two workers + one cron scheduler**. Check http://localhost:8082/healthz.
 
 | Command | Action |
 |---|---|
