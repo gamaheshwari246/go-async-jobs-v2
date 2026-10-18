@@ -77,7 +77,7 @@ func TestDelayedIdempotentReplayAfterRunAt(t *testing.T) {
     if code!=200 || replayedID!=id || !dupe {t.Fatalf("timezone replay code=%d id=%q dupe=%t",code,replayedID,dupe)}
 
     // Conflicts are still 409, even when both run_at timestamps have passed.
-    code,_,_=send(key,requestBody(when,"{"duration_ms":20}"))
+    code,_,_=send(key,requestBody(when,`{"duration_ms":20}`))
     if code!=409 {t.Fatalf("changed payload returned %d, expected 409",code)}
     old:=runTime.Add(-time.Minute).Format(time.RFC3339Nano)
     code,_,_=send(key,requestBody(old,"{}"))
