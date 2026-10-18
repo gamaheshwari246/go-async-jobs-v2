@@ -73,6 +73,16 @@ func (s epochInterval) Next(after time.Time) time.Time {
 	next := (after.UTC().UnixNano()/step + 1) * step
 	return time.Unix(0, next).UTC()
 }
+// All cron expressions are evaluated against UTC, even when tests or
+// different scheduler replicas supply time.Time values in different zones.
+type utcSchedule struct {
+	cron.Schedule
+}
+
+func (s utcSchedule) Next(after time.Time) time.Time {
+	return s.Schedule.Next(after.UTC()).UTC()
+}
+
 func parseSchedule(expr string) (cron.Schedule, error) {
 	if strings.HasPrefix(expr, "@every ") {
 		period, err := time.ParseDuration(strings.TrimSpace(strings.TrimPrefix(expr, "@every ")))
@@ -85,7 +95,9 @@ func parseSchedule(expr string) (cron.Schedule, error) {
 		return epochInterval{period: period}, nil
 	}
 	parsed, err := cron.ParseStandard(expr)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	return utcSchedule{parsed}, nil
 }
 
