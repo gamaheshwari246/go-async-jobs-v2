@@ -139,3 +139,22 @@ func confirm(ctx context.Context, client redis.UniversalClient, key string, body
 	n, err := confirmScript.Run(ctx, client, []string{redisKey(key)}, fingerprint(body), token, mode).Int()
 	return n == 1, err
 }
+
+// Inspect performs a read-only lookup of a submission key and compares its
+// canonical job fingerprint. It never creates or renews a reservation, which
+// matters when replaying a delayed request whose run_at is already in the past.
+func Inspect(ctx context.Context, client redis.UniversalClient, key string, body []byte) (Decision, bool, error) {
+	values, err := client.HGetAll(ctx, redisKey(key)).Result()
+	if err != nil { return New, false, fmt.Errorf("inspect idempotency key: %w", err) }
+	if len(values)==0 {
+		// Support the old SETNX string-form key without mutating it.
+		value, err := client.Get(ctx, redisKey(key)).Result()
+		if err == redis.Nil { return New, false, nil }
+		if err != nil { return New, false, fmt.Errorf("inspect legacy idempotency key: %w", err) }
+		if value != fingerprint(body) { return Conflict, true, nil }
+		return InProgress, true, nil
+	}
+	if values["fingerprint"] != fingerprint(body) { return Conflict, true, nil }
+	if values["state"] == "committed" { return Existing, true, nil }
+	return InProgress, true, nil
+}

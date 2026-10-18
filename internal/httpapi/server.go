@@ -117,8 +117,18 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
+
+	// If the delay has elapsed, only a previously accepted matching
+	// Idempotency-Key can be replayed; a new past-dated submission is rejected.
 	job, err := spec.Validate(req)
 	if err != nil {
+		if req.RunAt != nil && r.Header.Get("Idempotency-Key") != "" {
+			pastJob, replayErr := spec.ValidateForReplay(req)
+			if replayErr == nil && pastJob.RunAt != nil && !pastJob.RunAt.After(time.Now()) {
+				s.replayPastScheduled(w, r, req, pastJob)
+				return
+			}
+		}
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -241,6 +251,60 @@ func (s *Server) submit(w http.ResponseWriter, r *http.Request) {
 		response["run_at"] = job.RunAt
 	}
 	writeJSON(w, http.StatusAccepted, response)
+}
+
+// replayPastScheduled is read-only until it verifies an already accepted task.
+// It must not call Reserve: doing so could claim an invalid past-dated request.
+func (s *Server) replayPastScheduled(w http.ResponseWriter, r *http.Request, req spec.SubmitRequest, job spec.Validated) {
+	key := r.Header.Get("Idempotency-Key")
+	if len(key) > 128 {
+		http.Error(w, "idempotency key too long", http.StatusBadRequest)
+		return
+	}
+	for _, ch := range key {
+		if ch < 33 || ch > 126 {
+			http.Error(w, "idempotency key must contain printable non-whitespace ASCII", http.StatusBadRequest)
+			return
+		}
+	}
+	if err := registry.Validate(registry.Definitions(nil), req.Type, req.Payload); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+	decision, found, err := idempotency.Inspect(r.Context(), s.Gate.Redis, key, job.Body)
+	if err != nil {
+		http.Error(w, "idempotency registry unavailable", http.StatusServiceUnavailable)
+		return
+	}
+	if !found {
+		http.Error(w, "run_at must be in the future", http.StatusBadRequest)
+		return
+	}
+	if decision == idempotency.Conflict {
+		http.Error(w, "idempotency key reused for different job configuration", http.StatusConflict)
+		return
+	}
+	existing, err := s.lookupExistingTask(idempotency.TaskID(key), job)
+	if err != nil {
+		// Avoid exposing task-body mismatches while preserving 409 conflict.
+		if err.Error() == "idempotency key collided with an existing different task" {
+			http.Error(w, "idempotency key reused for different job configuration", http.StatusConflict)
+		} else {
+			http.Error(w, "queue temporarily unavailable", http.StatusServiceUnavailable)
+		}
+		return
+	}
+	if existing != nil {
+		s.confirmObserved(r, key, job.Body)
+		s.writeDuplicate(w, r, existing, job)
+		return
+	}
+	if decision == idempotency.Existing {
+		http.Error(w, "original job has expired from the result store", http.StatusGone)
+		return
+	}
+	w.Header().Set("Retry-After", "1")
+	http.Error(w, "submission in progress; retry with the same idempotency key", http.StatusServiceUnavailable)
 }
 
 // lookupExistingTask inspects Asynq using the stable task ID. A matching

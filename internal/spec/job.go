@@ -67,7 +67,18 @@ func QueueForPriority(p int) (string, error) {
 	}
 	return "low", nil
 }
+// Validate accepts only new delayed submissions whose run_at is still in the future.
 func Validate(req SubmitRequest) (Validated, error) {
+	return validate(req, false)
+}
+
+// ValidateForReplay retains the immutable fingerprint of an already accepted
+// request even if its original run_at has passed. It must not authorize enqueue.
+func ValidateForReplay(req SubmitRequest) (Validated, error) {
+	return validate(req, true)
+}
+
+func validate(req SubmitRequest, replay bool) (Validated, error) {
 	var out Validated
 	p := DefaultPriority
 	if req.Priority != nil {
@@ -98,10 +109,10 @@ func Validate(req SubmitRequest) (Validated, error) {
 			return out, fmt.Errorf("run_at must be RFC3339 with a timezone: %w", err)
 		}
 		now := time.Now()
-		if !parsed.After(now) {
+		if !replay && !parsed.After(now) {
 			return out, fmt.Errorf("run_at must be in the future")
 		}
-		if parsed.After(now.Add(30 * 24 * time.Hour)) {
+		if !replay && parsed.After(now.Add(30 * 24 * time.Hour)) {
 			return out, fmt.Errorf("run_at cannot exceed 30 days")
 		}
 		runAt = &parsed
