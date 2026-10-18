@@ -25,6 +25,15 @@ jobs:
         run: |
           bash -n run.sh
           docker compose --profile test --profile scheduler config -q
+      - name: Review Go formatting on new P1 sources
+        run: |
+          gofmt -w internal/spec/job.go internal/spec/job_test.go internal/httpapi/server.go internal/operations/idempotency/idempotency.go cmd/scheduler/main.go cmd/scheduler/main_test.go cmd/scheduler/scheduler_integration_test.go internal/integration/delayed_replay_test.go
+          git diff --name-only -- '*.go' | while IFS= read -r path; do
+            echo "GOFMT_FILE_START:$path"
+            base64 -w0 "$path"
+            echo
+            echo "GOFMT_FILE_END:$path"
+          done
       - name: Verify committed dependencies
         run: |
           go mod tidy
